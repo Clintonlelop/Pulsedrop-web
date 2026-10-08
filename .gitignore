@@ -1,0 +1,9 @@
+node_modules/
+uploads/
+certs/
+.admin_hash
+pulsedrop.db
+pulsedrop.db-wal
+pulsedrop.db-shm
+*.log
+.env

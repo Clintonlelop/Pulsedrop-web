@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseDrop — Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <h1>PulseDrop</h1>
+        <p class="login-subtitle">Personal Device Telemetry Dashboard</p>
+        <form id="loginForm">
+            <input type="text" id="username" placeholder="Username" autocomplete="username" required>
+            <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
+            <button type="submit">Login</button>
+        </form>
+        <p id="loginError" class="error-msg"></p>
+        <div class="disclaimer-box">
+            <strong>⚠ Personal Use Only</strong><br>
+            This software is for testing on devices you own. Monitoring devices you do not own without full consent is illegal.
+        </div>
+    </div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errEl = document.getElementById('loginError');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    errEl.textContent = data.error || 'Login failed';
+                }
+            } catch (e) {
+                errEl.textContent = 'Connection error';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "pulsedrop-dashboard",
+  "version": "2.0.0",
+  "description": "PulseDrop web control dashboard for personal device testing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.4.3",
+    "ws": "^8.16.0",
+    "multer": "^1.4.5-lts.1",
+    "body-parser": "^1.20.2",
+    "path": "^0.12.7",
+    "fs": "^0.0.1-security"
+  }
+}

